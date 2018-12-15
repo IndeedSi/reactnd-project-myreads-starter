@@ -13,6 +13,8 @@ class SearchPage extends React.Component {
         this.setState({query: query});
         if (query) {
             this.handleSearch(query);
+        } else {
+            this.setState({result: []});
         }
     };
     handleSearch = (query) => {
@@ -20,7 +22,14 @@ class SearchPage extends React.Component {
             .then((books) => {
                 this.setState((prevState) => {
                     if (prevState.query === query) {
-                        return {result: !books || books.error ? [] : books};
+                        let newResult = !books || books.error ? [] : books;
+                        let shelfBooks = this.props.shelfBooks;
+                        for (let book of newResult) {
+                            if (shelfBooks[book.id]) {
+                                book.shelf = shelfBooks[book.id].shelf;
+                            }
+                        }
+                        return {result: newResult};
                     }
                     return {};
                 });
@@ -29,25 +38,23 @@ class SearchPage extends React.Component {
     onUpdateShelf = (book, shelf) => {
         this.props.onUpdateShelf(book, shelf);
         this.setState((prevState) => {
-            let prevResult = prevState.result;
-            let result = [];
-            for (let resultBook of prevResult) {
+            let result = prevState.result;
+            for (let resultBook of result) {
                 if (resultBook.id === book.id) {
-                    book.shelf = (shelf === 'none' ? undefined : shelf);
-                    result.push(book);
-                } else {
-                    result.push(resultBook);
+                    resultBook.shelf = (shelf === 'none' ? undefined : shelf);
                 }
             }
             return result;
         });
     };
+
     render() {
-        const { shelves, getShelfTitle, onUpdateShelf } = this.props;
+        const {shelves, getShelfTitle} = this.props;
         return (<div className="search-books">
             <SearchBar onQueryChange={this.onQueryChange} query={this.state.query}/>
             <div className="search-books-results">
-                <BookGrid shelves={shelves} books={this.state.result} getShelfTitle={getShelfTitle} onUpdateShelf={onUpdateShelf}/>
+                <BookGrid shelves={shelves} books={this.state.result} getShelfTitle={getShelfTitle}
+                          onUpdateShelf={this.onUpdateShelf}/>
             </div>
         </div>);
     }
@@ -56,7 +63,8 @@ class SearchPage extends React.Component {
 SearchPage.propTypes = {
     shelves: PropTypes.array.isRequired,
     getShelfTitle: PropTypes.func.isRequired,
-    onUpdateShelf: PropTypes.func.isRequired
+    onUpdateShelf: PropTypes.func.isRequired,
+    shelfBooks: PropTypes.object.isRequired
 };
 
 export default SearchPage;
